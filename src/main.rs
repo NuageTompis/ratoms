@@ -8,7 +8,7 @@ use ratatui::{
     widgets::{StatefulWidget, Widget},
 };
 
-use crate::{ratom::Ratom, widgets::AtomCell};
+use crate::{ratom::Ratom, widgets::AtomicPeriod};
 
 mod ratom;
 mod widgets;
@@ -56,10 +56,18 @@ struct Dimensions {
 }
 
 // we consider that the minimum requirements to render an element (including borders) is a square of 12x6
+const MIMIMUM_ATOMIC_CELL_DIMENSIONS: Dimensions = Dimensions {
+    width: 12,
+    height: 6,
+};
+
+const ROWS_AMOUNT: usize = 9;
+const COLUMNS_AMOUNT: usize = 18;
+
 // with a display on 9 lines and 18 columns, this gives 216x54
-const MINIMUM_DIMENSIONS: Dimensions = Dimensions {
-    width: 216,
-    height: 54,
+const MINIMUM_WINDOW_DIMENSIONS: Dimensions = Dimensions {
+    width: COLUMNS_AMOUNT as u16 * MIMIMUM_ATOMIC_CELL_DIMENSIONS.width,
+    height: ROWS_AMOUNT as u16 * MIMIMUM_ATOMIC_CELL_DIMENSIONS.height,
 };
 
 impl From<Rect> for Dimensions {
@@ -79,11 +87,12 @@ impl Display for Dimensions {
 
 fn test_sufficient_dimensions(area: Rect) -> Result<(), String> {
     let dimensions: Dimensions = area.into();
-    if dimensions.height < MINIMUM_DIMENSIONS.height || dimensions.width < MINIMUM_DIMENSIONS.width
+    if dimensions.height < MINIMUM_WINDOW_DIMENSIONS.height
+        || dimensions.width < MINIMUM_WINDOW_DIMENSIONS.width
     {
         Err(format!(
             "insufficient dimensions: is {} but should be at least {}",
-            dimensions, MINIMUM_DIMENSIONS
+            dimensions, MINIMUM_WINDOW_DIMENSIONS
         ))
     } else {
         Ok(())
@@ -114,12 +123,37 @@ impl StatefulWidget for App {
 }
 
 fn render_table(area: Rect, buf: &mut Buffer, state: &mut AppState) {
-    // minimal atom area (for testing purposes)
-    let [area] = Layout::vertical([Constraint::Length(6)]).areas(area);
-    let [area] = Layout::horizontal([Constraint::Length(12)]).areas(area);
-    let ratom = Ratom::build(String::from("He"), 2, String::from("Helium")).unwrap();
-    let atom_cell = AtomCell { ratom };
-    atom_cell.render(area, buf);
+    let [area1, area2] =
+        Layout::vertical([Constraint::Length(6), Constraint::Length(6)]).areas(area);
+    let left_row = Some(vec![
+        Ratom::build(String::from("H"), 1, String::from("")).unwrap(),
+    ]);
+
+    let right_row = vec![Ratom::build(String::from("He"), 2, String::from("")).unwrap()];
+    let first_period = AtomicPeriod {
+        left_row,
+        right_row,
+    };
+    first_period.render(area1, buf);
+
+    let left_row = Some(vec![
+        Ratom::build(String::from("Li"), 3, String::from("")).unwrap(),
+        Ratom::build(String::from("Be"), 4, String::from("")).unwrap(),
+    ]);
+
+    let right_row = vec![
+        Ratom::build(String::from("B"), 5, String::from("")).unwrap(),
+        Ratom::build(String::from("C"), 6, String::from("")).unwrap(),
+        Ratom::build(String::from("N"), 7, String::from("")).unwrap(),
+        Ratom::build(String::from("O"), 8, String::from("")).unwrap(),
+        Ratom::build(String::from("F"), 9, String::from("")).unwrap(),
+        Ratom::build(String::from("Ne"), 10, String::from("")).unwrap(),
+    ];
+    let first_period = AtomicPeriod {
+        left_row,
+        right_row,
+    };
+    first_period.render(area2, buf);
 }
 
 fn center_vertical(area: Rect, height: u16) -> Rect {
