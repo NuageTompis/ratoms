@@ -25,6 +25,7 @@ fn main() -> io::Result<()> {
     })
 }
 
+/// Return Ok(true) when the app should exit
 fn handle_events(state: &mut AppState) -> io::Result<bool> {
     if crossterm::event::read()?.is_key_press() {
         if state.should_exit {
@@ -54,6 +55,8 @@ struct Dimensions {
     height: u16,
 }
 
+// we consider that the minimum requirements to render an element (including borders) is a square of 12x6
+// with a display on 9 lines and 18 columns, this gives 216x54
 const MINIMUM_DIMENSIONS: Dimensions = Dimensions {
     width: 216,
     height: 54,
