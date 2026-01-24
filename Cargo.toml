@@ -4,4 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+anyhow = "1.0.100"
 ratatui = "0.30.0"
+thiserror = "2.0.17"
+tui-big-text = "0.8.1"

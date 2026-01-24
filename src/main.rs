@@ -8,6 +8,11 @@ use ratatui::{
     widgets::{StatefulWidget, Widget},
 };
 
+use crate::{ratom::Ratom, widgets::atom_cell};
+
+mod ratom;
+mod widgets;
+
 fn main() -> io::Result<()> {
     let mut state = AppState::new();
     ratatui::run(|terminal| {
@@ -93,8 +98,8 @@ impl StatefulWidget for App {
                 .render(area, buf);
         } else {
             match test_sufficient_dimensions(area) {
-                Ok(_) => {
-                    Line::raw("ok").centered().render(area, buf);
+                Ok(()) => {
+                    render_table(area, buf, state);
                 }
                 Err(e) => {
                     let area = center_vertical(area, 1);
@@ -103,6 +108,14 @@ impl StatefulWidget for App {
             }
         }
     }
+}
+
+fn render_table(area: Rect, buf: &mut Buffer, state: &mut AppState) {
+    // minimal atom area (for testing purposes)
+    let [area] = Layout::vertical([Constraint::Length(6)]).areas(area);
+    let [area] = Layout::horizontal([Constraint::Length(12)]).areas(area);
+    let atom = Ratom::build(String::from("He"), 2, String::from("Helium"));
+    atom_cell(area, buf, atom.unwrap());
 }
 
 fn center_vertical(area: Rect, height: u16) -> Rect {
