@@ -8,7 +8,7 @@ use ratatui::{
     widgets::{StatefulWidget, Widget},
 };
 
-use crate::{ratom::Ratom, widgets::atom_cell};
+use crate::{ratom::Ratom, widgets::AtomCell};
 
 mod ratom;
 mod widgets;
@@ -117,8 +117,9 @@ fn render_table(area: Rect, buf: &mut Buffer, state: &mut AppState) {
     // minimal atom area (for testing purposes)
     let [area] = Layout::vertical([Constraint::Length(6)]).areas(area);
     let [area] = Layout::horizontal([Constraint::Length(12)]).areas(area);
-    let atom = Ratom::build(String::from("He"), 2, String::from("Helium"));
-    atom_cell(area, buf, atom.unwrap());
+    let ratom = Ratom::build(String::from("He"), 2, String::from("Helium")).unwrap();
+    let atom_cell = AtomCell { ratom };
+    atom_cell.render(area, buf);
 }
 
 fn center_vertical(area: Rect, height: u16) -> Rect {

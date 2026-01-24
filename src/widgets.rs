@@ -8,15 +8,21 @@ use tui_big_text::{BigText, PixelSize};
 
 use crate::ratom::Ratom;
 
-pub fn atom_cell(area: Rect, buf: &mut Buffer, atom: Ratom) {
-    // construct the outer block
-    let atom_block = Block::bordered().gray();
-    let atom_text_area = atom_block.inner(area);
-    atom_block.render(area, buf);
+pub struct AtomCell {
+    pub ratom: Ratom,
+}
 
-    // construct the atomic symbol within the block
-    let big_text = atom_big_text(atom.get_symbol());
-    big_text.render(atom_text_area, buf);
+impl Widget for AtomCell {
+    fn render(self, area: Rect, buf: &mut Buffer) {
+        // construct the outer block
+        let atom_block = Block::bordered().gray();
+        let atom_text_area = atom_block.inner(area);
+        atom_block.render(area, buf);
+
+        // construct the atomic symbol within the block
+        let big_text = atom_big_text(self.ratom.get_symbol());
+        big_text.render(atom_text_area, buf);
+    }
 }
 
 fn atom_big_text(symbol: &str) -> BigText<'_> {
