@@ -34,10 +34,22 @@ impl Widget for AtomCell {
     }
 }
 
+#[derive(Debug)]
 pub struct AtomicPeriod {
+    pub number: u8,
     // for rows split in two like H - He
     pub left_row: Option<Vec<Ratom>>,
     pub right_row: Vec<Ratom>,
+}
+
+impl AtomicPeriod {
+    pub fn new(number: u8) -> Self {
+        Self {
+            number,
+            left_row: None,
+            right_row: Vec::with_capacity(COLUMNS_AMOUNT),
+        }
+    }
 }
 
 impl Widget for AtomicPeriod {

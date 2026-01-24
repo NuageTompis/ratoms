@@ -7,11 +7,23 @@ use ratatui::{
     text::Line,
     widgets::{StatefulWidget, Widget},
 };
+use thiserror::Error;
 
-use crate::{ratom::Ratom, widgets::AtomicPeriod};
+use crate::{ratom::RatomBuildError, read_csv::read_periods};
 
 mod ratom;
+mod read_csv;
 mod widgets;
+
+#[derive(Error, Debug)]
+pub enum RatomsError {
+    #[error("io error")]
+    Io(#[from] io::Error),
+    #[error("ratom build error")]
+    RatomBuild(#[from] RatomBuildError),
+    #[error("csv error")]
+    Csv(#[from] csv::Error),
+}
 
 fn main() -> io::Result<()> {
     let mut state = AppState::new();
@@ -123,37 +135,13 @@ impl StatefulWidget for App {
 }
 
 fn render_table(area: Rect, buf: &mut Buffer, state: &mut AppState) {
-    let [area1, area2] =
-        Layout::vertical([Constraint::Length(6), Constraint::Length(6)]).areas(area);
-    let left_row = Some(vec![
-        Ratom::build(String::from("H"), 1, String::from("")).unwrap(),
-    ]);
-
-    let right_row = vec![Ratom::build(String::from("He"), 2, String::from("")).unwrap()];
-    let first_period = AtomicPeriod {
-        left_row,
-        right_row,
-    };
-    first_period.render(area1, buf);
-
-    let left_row = Some(vec![
-        Ratom::build(String::from("Li"), 3, String::from("")).unwrap(),
-        Ratom::build(String::from("Be"), 4, String::from("")).unwrap(),
-    ]);
-
-    let right_row = vec![
-        Ratom::build(String::from("B"), 5, String::from("")).unwrap(),
-        Ratom::build(String::from("C"), 6, String::from("")).unwrap(),
-        Ratom::build(String::from("N"), 7, String::from("")).unwrap(),
-        Ratom::build(String::from("O"), 8, String::from("")).unwrap(),
-        Ratom::build(String::from("F"), 9, String::from("")).unwrap(),
-        Ratom::build(String::from("Ne"), 10, String::from("")).unwrap(),
-    ];
-    let first_period = AtomicPeriod {
-        left_row,
-        right_row,
-    };
-    first_period.render(area2, buf);
+    let areas: [Rect; ROWS_AMOUNT] =
+        Layout::vertical([Constraint::Length(MIMIMUM_ATOMIC_CELL_DIMENSIONS.height); ROWS_AMOUNT])
+            .areas(area);
+    let periods = read_periods().unwrap();
+    for (period, area) in periods.into_iter().zip(areas) {
+        period.render(area, buf);
+    }
 }
 
 fn center_vertical(area: Rect, height: u16) -> Rect {
