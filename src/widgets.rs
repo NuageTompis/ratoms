@@ -1,7 +1,7 @@
 use ratatui::{
     buffer::Buffer,
     layout::{Alignment, Constraint, Layout, Rect},
-    style::Stylize,
+    style::{Style, Stylize},
     widgets::{Block, Widget},
 };
 use tui_big_text::{BigText, PixelSize};
@@ -23,7 +23,8 @@ impl Widget for AtomCell {
         // construct the outer block
         let atom_block = Block::bordered()
             .gray()
-            .title_alignment(Alignment::Center)
+            .title_alignment(Alignment::Right)
+            .title_style(Style::default().bold())
             .title(format!(" {} ", self.ratom.get_number()));
         let atom_text_area = atom_block.inner(area);
         atom_block.render(area, buf);
