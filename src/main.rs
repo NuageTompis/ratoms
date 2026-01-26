@@ -9,7 +9,7 @@ use ratatui::{
 };
 use thiserror::Error;
 
-use crate::{ratom::RatomBuildError, read_csv::read_periods};
+use crate::{ratom::RatomBuildError, read_csv::read_csv_table_records};
 
 mod ratom;
 mod read_csv;
@@ -138,9 +138,20 @@ fn render_table(area: Rect, buf: &mut Buffer, state: &mut AppState) {
     let areas: [Rect; ROWS_AMOUNT] =
         Layout::vertical([Constraint::Length(MIMIMUM_ATOMIC_CELL_DIMENSIONS.height); ROWS_AMOUNT])
             .areas(area);
-    let periods = read_periods().unwrap();
-    for (period, area) in periods.into_iter().zip(areas) {
-        period.render(area, buf);
+    let areas: [[Rect; COLUMNS_AMOUNT]; ROWS_AMOUNT] = areas.map(|area| {
+        Layout::horizontal(
+            [Constraint::Length(MIMIMUM_ATOMIC_CELL_DIMENSIONS.width); COLUMNS_AMOUNT],
+        )
+        .areas(area)
+    });
+
+    let cells_matrix = read_csv_table_records(state).unwrap();
+    for row in cells_matrix {
+        for cell in row.into_iter().flatten() {
+            let i = cell.row;
+            let j = cell.column;
+            cell.render(areas[i][j], buf);
+        }
     }
 }
 

@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Ratom {
     symbol: String,
     number: u8,

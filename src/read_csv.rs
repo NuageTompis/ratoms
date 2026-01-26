@@ -1,8 +1,6 @@
-use std::io;
-
 use serde::Deserialize;
 
-use crate::{ROWS_AMOUNT, RatomsError, ratom::Ratom, widgets::AtomicPeriod};
+use crate::{AppState, COLUMNS_AMOUNT, ROWS_AMOUNT, RatomsError, ratom::Ratom, widgets::AtomCell};
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "PascalCase")]
@@ -16,7 +14,7 @@ struct ElementRecord {
     numberof_protons: String,
     numberof_electrons: String,
     period: u8,
-    group: String,
+    group: Option<u8>,
     phase: String,
     radioactive: String,
     natural: String,
@@ -40,10 +38,16 @@ struct ElementRecord {
 
 const CSV_PATH: &str = "resources/periodic-table-of-elements.csv";
 
-pub fn read_periods() -> Result<Vec<AtomicPeriod>, RatomsError> {
-    let mut res: Vec<AtomicPeriod> = (1..ROWS_AMOUNT)
-        .map(|row| AtomicPeriod::new(row as u8))
-        .collect();
+pub fn read_csv_table_records(state: &AppState) -> Result<Vec<Vec<Option<AtomCell>>>, RatomsError> {
+    // initiate matrix of ROWS_AMOUNT x COLUMNS_AMOUNT
+    let mut res: Vec<Vec<Option<AtomCell>>> = Vec::with_capacity(ROWS_AMOUNT);
+    for _ in 0..ROWS_AMOUNT {
+        let mut new_row = Vec::with_capacity(COLUMNS_AMOUNT);
+        for _ in 0..COLUMNS_AMOUNT {
+            new_row.push(None);
+        }
+        res.push(new_row);
+    }
 
     let mut rdr = csv::Reader::from_path(CSV_PATH)?;
     for result in rdr.deserialize() {
@@ -53,7 +57,32 @@ pub fn read_periods() -> Result<Vec<AtomicPeriod>, RatomsError> {
             record.atomic_number,
             record.element,
         )?;
-        res[record.period as usize - 1].right_row.push(atom);
+
+        if let Some(column) = record.group {
+            let cell = AtomCell::new(atom, record.period as usize - 1, column as usize - 1);
+            let (i, j) = (cell.row, cell.column);
+            res[i][j] = Some(cell);
+        }
     }
+
     Ok(res)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_deserialize_csv_table() {
+        let mut rdr = csv::Reader::from_path(CSV_PATH).unwrap();
+        for result in rdr.deserialize() {
+            let record: ElementRecord = result.unwrap();
+            let _ = Ratom::build(
+                record.symbol.trim().to_string(),
+                record.atomic_number,
+                record.element,
+            )
+            .unwrap();
+        }
+    }
 }
