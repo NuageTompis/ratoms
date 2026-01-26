@@ -2,7 +2,10 @@ use std::{fmt::Display, io};
 
 use ratatui::{
     buffer::Buffer,
-    crossterm,
+    crossterm::{
+        self,
+        event::{Event, KeyCode, KeyEventKind},
+    },
     layout::{Constraint, Flex, Layout, Rect},
     text::Line,
     widgets::{StatefulWidget, Widget},
@@ -37,25 +40,65 @@ fn main() -> io::Result<()> {
     })
 }
 
-/// Return Ok(true) when the app should exit
 fn handle_events(state: &mut AppState) -> io::Result<bool> {
-    if crossterm::event::read()?.is_key_press() {
-        if state.should_exit {
-            return Ok(true);
-        } else {
-            state.should_exit = true;
+    let should_exit = match crossterm::event::read()? {
+        Event::Key(key_event) if key_event.kind == KeyEventKind::Press => {
+            handle_key_press(state, key_event.code)
+        }
+        _ => false,
+    };
+    Ok(should_exit)
+}
+
+const ARROW_KEYCODES: [KeyCode; 4] = [KeyCode::Up, KeyCode::Right, KeyCode::Down, KeyCode::Left];
+fn handle_key_press(state: &mut AppState, code: KeyCode) -> bool {
+    // handle arrow movement
+    if ARROW_KEYCODES.contains(&code) {
+        match state.cell_highlighted {
+            Some((mut i, mut j)) => {
+                let within_matrix_bounds = !match code {
+                    KeyCode::Up => overflowing_dec(&mut i),
+                    KeyCode::Right => overflowing_inc(&mut j, COLUMNS_AMOUNT),
+                    KeyCode::Down => overflowing_inc(&mut i, ROWS_AMOUNT),
+                    KeyCode::Left => overflowing_dec(&mut j),
+                    _ => panic!(),
+                };
+                if within_matrix_bounds && state.cells_matrix[i][j] {
+                    state.cell_highlighted = Some((i, j));
+                }
+            }
+            None => state.cell_highlighted = Some((0, 0)),
         }
     }
-    Ok(false)
+
+    // handle quit
+    match code {
+        KeyCode::Char('q') | KeyCode::Esc => {
+            if state.should_exit {
+                return true;
+            } else {
+                state.should_exit = true;
+            }
+        }
+        _ => (),
+    }
+    false
 }
 
 struct AppState {
     should_exit: bool,
+    cell_highlighted: Option<(usize, usize)>,
+    /// is *true* at index [i,j] if there is an atom rendered there
+    cells_matrix: Vec<Vec<bool>>,
 }
 
 impl AppState {
     fn new() -> Self {
-        Self { should_exit: false }
+        Self {
+            should_exit: false,
+            cell_highlighted: None,
+            cells_matrix: Vec::new(),
+        }
     }
 }
 
@@ -146,6 +189,11 @@ fn render_table(area: Rect, buf: &mut Buffer, state: &mut AppState) {
     });
 
     let cells_matrix = read_csv_table_records(state).unwrap();
+    state.cells_matrix = cells_matrix
+        .iter()
+        .map(|row| row.iter().map(|option| option.is_some()).collect())
+        .collect();
+
     for row in cells_matrix {
         for cell in row.into_iter().flatten() {
             let i = cell.row;
@@ -160,4 +208,19 @@ fn center_vertical(area: Rect, height: u16) -> Rect {
         .flex(Flex::Center)
         .areas(area);
     area
+}
+
+/// Decrerement index and informs if an overflow occured
+fn overflowing_dec(index: &mut usize) -> bool {
+    let res;
+    (*index, res) = index.overflowing_sub(1);
+    res
+}
+
+/// Increment index and informs if an overflow occured
+///
+/// assumes *index < upper_bound* and *upper_bound < usize::MAX*
+fn overflowing_inc(index: &mut usize, upper_bound: usize) -> bool {
+    *index += 1;
+    *index == upper_bound
 }

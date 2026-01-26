@@ -2,6 +2,7 @@ use ratatui::{
     buffer::Buffer,
     layout::{Alignment, Rect},
     style::{Style, Stylize},
+    symbols::border::{PLAIN, THICK},
     widgets::{Block, Widget},
 };
 use tui_big_text::{BigText, PixelSize};
@@ -12,11 +13,17 @@ pub struct AtomCell {
     pub ratom: Ratom,
     pub row: usize,
     pub column: usize,
+    pub highlighted: bool,
 }
 
 impl AtomCell {
     pub fn new(ratom: Ratom, row: usize, column: usize) -> Self {
-        Self { ratom, row, column }
+        Self {
+            ratom,
+            row,
+            column,
+            highlighted: false,
+        }
     }
 }
 
@@ -29,8 +36,16 @@ impl Widget for AtomCell {
             return;
         }
 
+        // construct the outer block
+        let block_style = if self.highlighted {
+            Style::default().cyan().bold()
+        } else {
+            Style::default()
+        };
         let atom_block = Block::bordered()
+            .border_set(if self.highlighted { THICK } else { PLAIN })
             .gray()
+            .style(block_style)
             .title_alignment(Alignment::Right)
             .title_style(Style::default().bold())
             .title(format!(" {} ", self.ratom.get_number()));
@@ -48,5 +63,6 @@ fn atom_big_text(symbol: &str) -> BigText<'_> {
         .pixel_size(PixelSize::Quadrant)
         .lines(vec![symbol.bold().into()])
         .centered()
+        .style(Style::default().white())
         .build()
 }

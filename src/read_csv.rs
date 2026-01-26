@@ -65,6 +65,13 @@ pub fn read_csv_table_records(state: &AppState) -> Result<Vec<Vec<Option<AtomCel
         }
     }
 
+    if let Some((i, j)) = state.cell_highlighted {
+        res[i][j]
+            .as_mut()
+            .expect("trying to highlight an empty cell")
+            .highlighted = true;
+    }
+
     Ok(res)
 }
 
