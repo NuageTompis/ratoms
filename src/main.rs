@@ -30,6 +30,8 @@ pub enum RatomsError {
     RatomBuild(#[from] RatomBuildError),
     #[error("csv error")]
     Csv(#[from] csv::Error),
+    #[error("unexpected error")]
+    Custom(String),
 }
 
 fn main() -> io::Result<()> {
@@ -123,10 +125,13 @@ const MIMIMUM_ATOMIC_CELL_DIMENSIONS: Dimensions = Dimensions {
 const ROWS_AMOUNT: usize = 9;
 const COLUMNS_AMOUNT: usize = 18;
 
-// with a display on 9 lines and 18 columns, this gives 216x54
+const F_BLOCK_SEPARATOR_HEIGHT: u16 = 5;
+const F_BLOCK_ROWS_AMOUNT: usize = 1;
+
+// a main display on 9 lines and 18 columns + additional sections
 const MINIMUM_WINDOW_DIMENSIONS: Dimensions = Dimensions {
     width: COLUMNS_AMOUNT as u16 * MIMIMUM_ATOMIC_CELL_DIMENSIONS.width,
-    height: ROWS_AMOUNT as u16 * MIMIMUM_ATOMIC_CELL_DIMENSIONS.height,
+    height: ROWS_AMOUNT as u16 * MIMIMUM_ATOMIC_CELL_DIMENSIONS.height + F_BLOCK_SEPARATOR_HEIGHT,
 };
 
 impl From<Rect> for Dimensions {
@@ -182,10 +187,26 @@ impl StatefulWidget for App {
 }
 
 fn render_table(area: Rect, buf: &mut Buffer, state: &mut AppState) {
-    let areas: [Rect; ROWS_AMOUNT] =
-        Layout::vertical([Constraint::Length(MIMIMUM_ATOMIC_CELL_DIMENSIONS.height); ROWS_AMOUNT])
-            .areas(area);
-    let areas: [[Rect; COLUMNS_AMOUNT]; ROWS_AMOUNT] = areas.map(|area| {
+    // constructs the vertical constraints: 7 rows of atoms - separator - 2 rows for the f-block
+    let f_block_separator_index = ROWS_AMOUNT - 1 - F_BLOCK_ROWS_AMOUNT;
+    let mut vertical_constraints =
+        vec![Constraint::Length(MIMIMUM_ATOMIC_CELL_DIMENSIONS.height); ROWS_AMOUNT];
+    vertical_constraints.insert(
+        f_block_separator_index,
+        Constraint::Length(F_BLOCK_SEPARATOR_HEIGHT),
+    );
+    const VERTICAL_AREAS_AMOUNT_WITH_SEPARATOR: usize = ROWS_AMOUNT + 1;
+    let vertical_areas: [Rect; ROWS_AMOUNT] = Layout::vertical(vertical_constraints)
+        .areas::<VERTICAL_AREAS_AMOUNT_WITH_SEPARATOR>(area)
+        .into_iter()
+        .enumerate()
+        .filter(|&(i, _)| i != f_block_separator_index)
+        .map(|(_, val)| val)
+        .collect::<Vec<_>>()
+        .try_into()
+        .unwrap();
+
+    let areas: [[Rect; COLUMNS_AMOUNT]; ROWS_AMOUNT] = vertical_areas.map(|area| {
         Layout::horizontal(
             [Constraint::Length(MIMIMUM_ATOMIC_CELL_DIMENSIONS.width); COLUMNS_AMOUNT],
         )

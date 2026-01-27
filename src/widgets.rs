@@ -22,13 +22,6 @@ impl AtomCell {
 
 impl Widget for AtomCell {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        // we temporarily don't render lanthanides and actinides (15 not 14)
-        if (57_u8..=71).contains(&self.ratom.get_number())
-            || (89_u8..=103).contains(&self.ratom.get_number())
-        {
-            return;
-        }
-
         // construct the outer block
         let block_style = if self.focused {
             Style::default().cyan().bold()
