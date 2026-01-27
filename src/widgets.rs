@@ -13,7 +13,7 @@ pub struct AtomCell {
     pub ratom: Ratom,
     pub row: usize,
     pub column: usize,
-    pub highlighted: bool,
+    pub focused: bool,
 }
 
 impl AtomCell {
@@ -22,7 +22,7 @@ impl AtomCell {
             ratom,
             row,
             column,
-            highlighted: false,
+            focused: false,
         }
     }
 }
@@ -37,13 +37,13 @@ impl Widget for AtomCell {
         }
 
         // construct the outer block
-        let block_style = if self.highlighted {
+        let block_style = if self.focused {
             Style::default().cyan().bold()
         } else {
             Style::default()
         };
         let atom_block = Block::bordered()
-            .border_set(if self.highlighted { THICK } else { PLAIN })
+            .border_set(if self.focused { THICK } else { PLAIN })
             .gray()
             .style(block_style)
             .title_alignment(Alignment::Right)

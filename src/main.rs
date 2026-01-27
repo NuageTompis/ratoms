@@ -54,7 +54,7 @@ const ARROW_KEYCODES: [KeyCode; 4] = [KeyCode::Up, KeyCode::Right, KeyCode::Down
 fn handle_key_press(state: &mut AppState, code: KeyCode) -> bool {
     // handle arrow movement
     if ARROW_KEYCODES.contains(&code) {
-        match state.cell_highlighted {
+        match state.focused_cell {
             Some((mut i, mut j)) => {
                 let within_matrix_bounds = !match code {
                     KeyCode::Up => overflowing_dec(&mut i),
@@ -64,10 +64,10 @@ fn handle_key_press(state: &mut AppState, code: KeyCode) -> bool {
                     _ => panic!(),
                 };
                 if within_matrix_bounds && state.cells_matrix[i][j] {
-                    state.cell_highlighted = Some((i, j));
+                    state.focused_cell = Some((i, j));
                 }
             }
-            None => state.cell_highlighted = Some((0, 0)),
+            None => state.focused_cell = Some((0, 0)),
         }
     }
 
@@ -87,7 +87,7 @@ fn handle_key_press(state: &mut AppState, code: KeyCode) -> bool {
 
 struct AppState {
     should_exit: bool,
-    cell_highlighted: Option<(usize, usize)>,
+    focused_cell: Option<(usize, usize)>,
     /// is *true* at index [i,j] if there is an atom rendered there
     cells_matrix: Vec<Vec<bool>>,
 }
@@ -96,7 +96,7 @@ impl AppState {
     fn new() -> Self {
         Self {
             should_exit: false,
-            cell_highlighted: None,
+            focused_cell: None,
             cells_matrix: Vec::new(),
         }
     }
