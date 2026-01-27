@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-use crate::{AppState, COLUMNS_AMOUNT, ROWS_AMOUNT, RatomsError, ratom::Ratom, widgets::AtomCell};
+use crate::{COLUMNS_AMOUNT, ROWS_AMOUNT, RatomsError, ratom::Ratom};
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "PascalCase")]
@@ -38,16 +38,9 @@ struct ElementRecord {
 
 const CSV_PATH: &str = "resources/periodic-table-of-elements.csv";
 
-pub fn read_csv_table_records(state: &AppState) -> Result<Vec<Vec<Option<AtomCell>>>, RatomsError> {
+pub fn read_csv_table_records() -> Result<Vec<Vec<Option<Ratom>>>, RatomsError> {
     // initiate matrix of ROWS_AMOUNT x COLUMNS_AMOUNT
-    let mut res: Vec<Vec<Option<AtomCell>>> = Vec::with_capacity(ROWS_AMOUNT);
-    for _ in 0..ROWS_AMOUNT {
-        let mut new_row = Vec::with_capacity(COLUMNS_AMOUNT);
-        for _ in 0..COLUMNS_AMOUNT {
-            new_row.push(None);
-        }
-        res.push(new_row);
-    }
+    let mut res: Vec<Vec<Option<Ratom>>> = vec![vec![None; COLUMNS_AMOUNT]; ROWS_AMOUNT];
 
     let mut rdr = csv::Reader::from_path(CSV_PATH)?;
     for result in rdr.deserialize() {
@@ -59,17 +52,9 @@ pub fn read_csv_table_records(state: &AppState) -> Result<Vec<Vec<Option<AtomCel
         )?;
 
         if let Some(column) = record.group {
-            let cell = AtomCell::new(atom, record.period as usize - 1, column as usize - 1);
-            let (i, j) = (cell.row, cell.column);
-            res[i][j] = Some(cell);
+            let (i, j) = (record.period as usize - 1, column as usize - 1);
+            res[i][j] = Some(atom);
         }
-    }
-
-    if let Some((i, j)) = state.focused_cell {
-        res[i][j]
-            .as_mut()
-            .expect("trying to focus an empty cell")
-            .focused = true;
     }
 
     Ok(res)
@@ -81,15 +66,6 @@ mod tests {
 
     #[test]
     fn test_deserialize_csv_table() {
-        let mut rdr = csv::Reader::from_path(CSV_PATH).unwrap();
-        for result in rdr.deserialize() {
-            let record: ElementRecord = result.unwrap();
-            let _ = Ratom::build(
-                record.symbol.trim().to_string(),
-                record.atomic_number,
-                record.element,
-            )
-            .unwrap();
-        }
+        read_csv_table_records().unwrap();
     }
 }

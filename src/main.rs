@@ -12,7 +12,11 @@ use ratatui::{
 };
 use thiserror::Error;
 
-use crate::{ratom::RatomBuildError, read_csv::read_csv_table_records};
+use crate::{
+    ratom::{Ratom, RatomBuildError},
+    read_csv::read_csv_table_records,
+    widgets::AtomCell,
+};
 
 mod ratom;
 mod read_csv;
@@ -63,7 +67,7 @@ fn handle_key_press(state: &mut AppState, code: KeyCode) -> bool {
                     KeyCode::Left => overflowing_dec(&mut j),
                     _ => panic!(),
                 };
-                if within_matrix_bounds && state.cells_matrix[i][j] {
+                if within_matrix_bounds && state.cells_matrix[i][j].is_some() {
                     state.focused_cell = Some((i, j));
                 }
             }
@@ -89,7 +93,7 @@ struct AppState {
     should_exit: bool,
     focused_cell: Option<(usize, usize)>,
     /// is *true* at index [i,j] if there is an atom rendered there
-    cells_matrix: Vec<Vec<bool>>,
+    cells_matrix: Vec<Vec<Option<Ratom>>>,
 }
 
 impl AppState {
@@ -97,7 +101,7 @@ impl AppState {
         Self {
             should_exit: false,
             focused_cell: None,
-            cells_matrix: Vec::new(),
+            cells_matrix: read_csv_table_records().unwrap(),
         }
     }
 }
@@ -188,17 +192,13 @@ fn render_table(area: Rect, buf: &mut Buffer, state: &mut AppState) {
         .areas(area)
     });
 
-    let cells_matrix = read_csv_table_records(state).unwrap();
-    state.cells_matrix = cells_matrix
-        .iter()
-        .map(|row| row.iter().map(|option| option.is_some()).collect())
-        .collect();
-
-    for row in cells_matrix {
-        for cell in row.into_iter().flatten() {
-            let i = cell.row;
-            let j = cell.column;
-            cell.render(areas[i][j], buf);
+    for (i, row) in state.cells_matrix.iter().enumerate() {
+        for (j, atom_optn) in row.iter().enumerate() {
+            if let Some(atom) = atom_optn {
+                let is_focused = state.focused_cell.is_some_and(|focused| focused == (i, j));
+                let cell = AtomCell::new(atom.clone(), is_focused);
+                cell.render(areas[i][j], buf);
+            }
         }
     }
 }

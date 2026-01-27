@@ -11,19 +11,12 @@ use crate::ratom::Ratom;
 
 pub struct AtomCell {
     pub ratom: Ratom,
-    pub row: usize,
-    pub column: usize,
     pub focused: bool,
 }
 
 impl AtomCell {
-    pub fn new(ratom: Ratom, row: usize, column: usize) -> Self {
-        Self {
-            ratom,
-            row,
-            column,
-            focused: false,
-        }
+    pub fn new(ratom: Ratom, focused: bool) -> Self {
+        Self { ratom, focused }
     }
 }
 
