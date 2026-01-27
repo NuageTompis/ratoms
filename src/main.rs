@@ -86,7 +86,7 @@ fn handle_key_press(state: &mut AppState, code: KeyCode) -> bool {
                 state.should_exit = true;
             }
         }
-        _ => (),
+        _ => state.should_exit = false,
     }
     false
 }
@@ -169,7 +169,7 @@ impl StatefulWidget for App {
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
         if state.should_exit {
             let area = center_vertical(area, 1);
-            Line::raw("press a key to confirm exit")
+            Line::raw("press Q or Esc to confirm exit")
                 .centered()
                 .render(area, buf);
         } else {
