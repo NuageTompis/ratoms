@@ -1,6 +1,9 @@
 use serde::Deserialize;
 
-use crate::{COLUMNS_AMOUNT, ROWS_AMOUNT, RatomsError, ratom::Ratom};
+use crate::{
+    COLUMNS_AMOUNT, ROWS_AMOUNT, RatomsError,
+    ratom::{Ratom, Type},
+};
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "PascalCase")]
@@ -21,7 +24,7 @@ struct ElementRecord {
     metal: String,
     nonmetal: String,
     metalloid: String,
-    r#type: String,
+    r#type: Option<Type>,
     atomic_radius: String,
     electronegativity: String,
     first_ionization: String,
@@ -73,6 +76,7 @@ pub fn read_csv_table_records() -> Result<Vec<Vec<Option<Ratom>>>, RatomsError> 
             record.symbol.trim().to_string(),
             record.atomic_number,
             record.element,
+            record.r#type,
         )?;
 
         res[i][j] = Some(atom);
