@@ -94,7 +94,7 @@ fn handle_key_press(state: &mut AppState, code: KeyCode) -> bool {
 struct AppState {
     should_exit: bool,
     focused_cell: Option<(usize, usize)>,
-    /// is *true* at index [i,j] if there is an atom rendered there
+    /// is *Some* at index (i,j) if there is an atom rendered there
     cells_matrix: Vec<Vec<Option<Ratom>>>,
 }
 
@@ -117,7 +117,7 @@ struct Dimensions {
 }
 
 // we consider that the minimum requirements to render an element (including borders) is a square of 12x6
-const MIMIMUM_ATOMIC_CELL_DIMENSIONS: Dimensions = Dimensions {
+const ATOMIC_CELL_DIMENSIONS: Dimensions = Dimensions {
     width: 12,
     height: 6,
 };
@@ -130,8 +130,8 @@ const F_BLOCK_ROWS_AMOUNT: usize = 1;
 
 // a main display on 9 lines and 18 columns + additional sections
 const MINIMUM_WINDOW_DIMENSIONS: Dimensions = Dimensions {
-    width: COLUMNS_AMOUNT as u16 * MIMIMUM_ATOMIC_CELL_DIMENSIONS.width,
-    height: ROWS_AMOUNT as u16 * MIMIMUM_ATOMIC_CELL_DIMENSIONS.height + F_BLOCK_SEPARATOR_HEIGHT,
+    width: COLUMNS_AMOUNT as u16 * ATOMIC_CELL_DIMENSIONS.width,
+    height: ROWS_AMOUNT as u16 * ATOMIC_CELL_DIMENSIONS.height + F_BLOCK_SEPARATOR_HEIGHT,
 };
 
 impl From<Rect> for Dimensions {
@@ -187,14 +187,15 @@ impl StatefulWidget for App {
 }
 
 fn render_table(area: Rect, buf: &mut Buffer, state: &mut AppState) {
-    // constructs the vertical constraints: 7 rows of atoms - separator - 2 rows for the f-block
+    // construct the vertical constraints: 7 rows of atoms - separator - 2 rows for the f-block
     let f_block_separator_index = ROWS_AMOUNT - 1 - F_BLOCK_ROWS_AMOUNT;
     let mut vertical_constraints =
-        vec![Constraint::Length(MIMIMUM_ATOMIC_CELL_DIMENSIONS.height); ROWS_AMOUNT];
+        vec![Constraint::Length(ATOMIC_CELL_DIMENSIONS.height); ROWS_AMOUNT];
     vertical_constraints.insert(
         f_block_separator_index,
         Constraint::Length(F_BLOCK_SEPARATOR_HEIGHT),
     );
+    // collect the vertical areas by removing the f-block separator
     const VERTICAL_AREAS_AMOUNT_WITH_SEPARATOR: usize = ROWS_AMOUNT + 1;
     let vertical_areas: [Rect; ROWS_AMOUNT] = Layout::vertical(vertical_constraints)
         .areas::<VERTICAL_AREAS_AMOUNT_WITH_SEPARATOR>(area)
@@ -206,13 +207,13 @@ fn render_table(area: Rect, buf: &mut Buffer, state: &mut AppState) {
         .try_into()
         .unwrap();
 
+    // construct the matrix of cells which will contain the elements
     let areas: [[Rect; COLUMNS_AMOUNT]; ROWS_AMOUNT] = vertical_areas.map(|area| {
-        Layout::horizontal(
-            [Constraint::Length(MIMIMUM_ATOMIC_CELL_DIMENSIONS.width); COLUMNS_AMOUNT],
-        )
-        .areas(area)
+        Layout::horizontal([Constraint::Length(ATOMIC_CELL_DIMENSIONS.width); COLUMNS_AMOUNT])
+            .areas(area)
     });
 
+    // render the periodic table
     for (i, row) in state.cells_matrix.iter().enumerate() {
         for (j, atom_optn) in row.iter().enumerate() {
             if let Some(atom) = atom_optn {

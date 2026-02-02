@@ -44,7 +44,7 @@ impl Widget for AtomCell {
     }
 }
 
-fn atom_big_text(symbol: &str) -> BigText<'_> {
+pub fn atom_big_text(symbol: &str) -> BigText<'_> {
     BigText::builder()
         .pixel_size(PixelSize::Quadrant)
         .lines(vec![symbol.bold().into()])
