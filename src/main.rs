@@ -15,7 +15,7 @@ use thiserror::Error;
 use crate::{
     ratom::{Ratom, RatomBuildError},
     read_csv::read_csv_table_records,
-    widgets::AtomCell,
+    widgets::{AtomCell, InfoBlockState, InformationBlock},
 };
 
 mod ratom;
@@ -60,21 +60,29 @@ const ARROW_KEYCODES: [KeyCode; 4] = [KeyCode::Up, KeyCode::Right, KeyCode::Down
 fn handle_key_press(state: &mut AppState, code: KeyCode) -> bool {
     // handle arrow movement
     if ARROW_KEYCODES.contains(&code) {
-        match state.focused_cell {
-            Some((mut i, mut j)) => {
-                let within_matrix_bounds = !match code {
-                    KeyCode::Up => overflowing_dec(&mut i),
-                    KeyCode::Right => overflowing_inc(&mut j, COLUMNS_AMOUNT),
-                    KeyCode::Down => overflowing_inc(&mut i, ROWS_AMOUNT),
-                    KeyCode::Left => overflowing_dec(&mut j),
-                    _ => panic!(),
-                };
-                if within_matrix_bounds && state.cells_matrix[i][j].is_some() {
-                    state.focused_cell = Some((i, j));
+        match state.region_focused {
+            AppRegion::CellsMatrix => match state.focused_cell {
+                Some((mut i, mut j)) => {
+                    let within_matrix_bounds = !match code {
+                        KeyCode::Up => overflowing_dec(&mut i),
+                        KeyCode::Right => overflowing_inc(&mut j, COLUMNS_AMOUNT),
+                        KeyCode::Down => overflowing_inc(&mut i, ROWS_AMOUNT),
+                        KeyCode::Left => overflowing_dec(&mut j),
+                        _ => panic!(),
+                    };
+                    if within_matrix_bounds && state.cells_matrix[i][j].is_some() {
+                        state.focused_cell = Some((i, j));
+                    }
                 }
-            }
-            None => state.focused_cell = Some((0, 0)),
+                None => state.focused_cell = Some((0, 0)),
+            },
+            AppRegion::InformationBlock => (),
         }
+    }
+
+    // handle switching between regions
+    if code == KeyCode::Tab {
+        state.region_focused.next();
     }
 
     // handle quit
@@ -96,6 +104,22 @@ struct AppState {
     focused_cell: Option<(usize, usize)>,
     /// is *Some* at index (i,j) if there is an atom rendered there
     cells_matrix: Vec<Vec<Option<Ratom>>>,
+    region_focused: AppRegion,
+}
+
+#[derive(PartialEq)]
+enum AppRegion {
+    CellsMatrix,
+    InformationBlock,
+}
+
+impl AppRegion {
+    fn next(&mut self) {
+        match self {
+            Self::CellsMatrix => *self = Self::InformationBlock,
+            Self::InformationBlock => *self = Self::CellsMatrix,
+        }
+    }
 }
 
 impl AppState {
@@ -104,6 +128,7 @@ impl AppState {
             should_exit: false,
             focused_cell: None,
             cells_matrix: read_csv_table_records().unwrap(),
+            region_focused: AppRegion::CellsMatrix,
         }
     }
 }
@@ -217,12 +242,32 @@ fn render_table(area: Rect, buf: &mut Buffer, state: &mut AppState) {
     for (i, row) in state.cells_matrix.iter().enumerate() {
         for (j, atom_optn) in row.iter().enumerate() {
             if let Some(atom) = atom_optn {
-                let is_focused = state.focused_cell.is_some_and(|focused| focused == (i, j));
+                let is_focused = state.region_focused == AppRegion::CellsMatrix
+                    && state.focused_cell.is_some_and(|focused| focused == (i, j));
                 let cell = AtomCell::new(atom.clone(), is_focused);
                 cell.render(areas[i][j], buf);
             }
         }
     }
+
+    // construct the information block
+    let [description_area_vertical] =
+        Layout::vertical([Constraint::Length(3 * ATOMIC_CELL_DIMENSIONS.height)]).areas(area);
+    let [_, description_area] = Layout::horizontal([
+        Constraint::Length(2 * ATOMIC_CELL_DIMENSIONS.width),
+        Constraint::Length(10 * ATOMIC_CELL_DIMENSIONS.width),
+    ])
+    .areas(description_area_vertical);
+
+    let focused_atom = state
+        .focused_cell
+        .and_then(|(i, j)| state.cells_matrix[i][j].clone());
+    let info_block = InformationBlock::new(
+        InfoBlockState::ElementDescription,
+        focused_atom,
+        state.region_focused == AppRegion::InformationBlock,
+    );
+    info_block.render(description_area, buf);
 }
 
 fn center_vertical(area: Rect, height: u16) -> Rect {
